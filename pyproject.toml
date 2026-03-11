@@ -27,10 +27,10 @@ classifiers = [
 magicprobe = "magicprobe.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/magicprobe"
-Repository = "https://github.com/yourusername/magicprobe"
-Issues = "https://github.com/yourusername/magicprobe/issues"
-Changelog = "https://github.com/yourusername/magicprobe/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/n7gj/magicprobe"
+Repository = "https://github.com/n7gj/magicprobe"
+Issues = "https://github.com/n7gj/magicprobe/issues"
+Changelog = "https://github.com/n7gj/magicprobe/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
