@@ -1,0 +1,40 @@
+name: Docker Integration Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  docker-integration:
+    name: ${{ matrix.os }} — libmagic integration
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu
+            dockerfile: docker/ubuntu.Dockerfile
+          - os: debian
+            dockerfile: docker/debian.Dockerfile
+          - os: alpine
+            dockerfile: docker/alpine.Dockerfile
+          - os: fedora
+            dockerfile: docker/fedora.Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image (${{ matrix.os }})
+        run: |
+          docker build \
+            --file ${{ matrix.dockerfile }} \
+            --tag  magicprobe-test-${{ matrix.os }} \
+            .
+
+      - name: Run integration tests (${{ matrix.os }})
+        run: |
+          docker run --rm magicprobe-test-${{ matrix.os }}

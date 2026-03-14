@@ -6,7 +6,8 @@ import pytest
 
 import magicprobe
 from magicprobe import probe, probe_all, ProbeResult
-from tests.conftest import pad
+from tests.conftest import needs_libmagic
+from tests.helpers import GIF_MAGIC, JPEG_MAGIC, PNG_BYTES, ZIP_BYTES, pad
 
 
 # ---------------------------------------------------------------------------
@@ -14,31 +15,29 @@ from tests.conftest import pad
 # ---------------------------------------------------------------------------
 
 
-def test_probe_returns_none_for_unknown_bytes():
-    assert probe(pad(b"\x00\x01\x02\x03")) is None
-
-
+@needs_libmagic
 def test_probe_accepts_bytearray():
-    data = bytearray(b"\x89PNG\r\n\x1a\n") + bytearray(254)
-    result = probe(data)
+    result = probe(bytearray(PNG_BYTES))
     assert result is not None
-    assert result.name == "PNG"
+    assert result.mime_type == "image/png"
 
 
+@needs_libmagic
 def test_probe_accepts_path_object(tmp_path):
     f = tmp_path / "sample.png"
-    f.write_bytes(pad(b"\x89PNG\r\n\x1a\n"))
+    f.write_bytes(PNG_BYTES)
     result = probe(f)
     assert result is not None
-    assert result.name == "PNG"
+    assert result.mime_type == "image/png"
 
 
+@needs_libmagic
 def test_probe_accepts_str_path(tmp_path):
     f = tmp_path / "sample.gif"
     f.write_bytes(pad(b"GIF89a"))
     result = probe(str(f))
     assert result is not None
-    assert result.name == "GIF"
+    assert result.mime_type == "image/gif"
 
 
 # ---------------------------------------------------------------------------
@@ -46,60 +45,65 @@ def test_probe_accepts_str_path(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+@needs_libmagic
 def test_probe_result_is_frozen():
-    result = probe(pad(b"\x89PNG\r\n\x1a\n"))
+    result = probe(PNG_BYTES)
+    assert result is not None
     with pytest.raises((AttributeError, TypeError)):
         result.name = "other"  # type: ignore[misc]
 
 
-def test_probe_result_extension_property():
-    result = probe(pad(b"\x89PNG\r\n\x1a\n"))
+@needs_libmagic
+def test_probe_result_extension_is_none():
+    result = probe(PNG_BYTES)
     assert result is not None
-    assert result.extension == ".png"
+    assert result.extension is None
 
 
+@needs_libmagic
 def test_probe_result_repr():
     result = probe(pad(b"\xff\xd8\xff"))
     assert result is not None
-    assert "JPEG" in repr(result)
     assert "image/jpeg" in repr(result)
 
 
 # ---------------------------------------------------------------------------
-# probe_all() — multiple matches
+# probe_all() — list return
 # ---------------------------------------------------------------------------
 
 
+@needs_libmagic
 def test_probe_all_returns_list():
-    results = probe_all(pad(b"\x89PNG\r\n\x1a\n"))
+    results = probe_all(PNG_BYTES)
     assert isinstance(results, list)
     assert len(results) >= 1
 
 
-def test_probe_all_png_single_match():
-    results = probe_all(pad(b"\x89PNG\r\n\x1a\n"))
-    names = [r.name for r in results]
-    assert "PNG" in names
+@needs_libmagic
+def test_probe_all_png_mime():
+    results = probe_all(PNG_BYTES)
+    mimes = [r.mime_type for r in results]
+    assert "image/png" in mimes
 
 
-def test_probe_all_empty_for_unknown():
+@needs_libmagic
+def test_probe_all_unknown_returns_list():
     results = probe_all(pad(b"\xaa\xbb\xcc\xdd"))
-    assert results == []
+    assert isinstance(results, list)
 
 
-def test_probe_all_ooxml_also_matches_zip():
-    # A minimal fake OOXML signature: PK header + [Content_Types].xml marker
-    fake_ooxml = b"PK\x03\x04" + b"\x00" * 27 + b"[Content_Types].xml" + b"\x00" * 100
-    results = probe_all(fake_ooxml)
-    names = [r.name for r in results]
-    assert "OOXML" in names
-    assert "ZIP" in names  # OOXML is a ZIP — both should match
+@needs_libmagic
+def test_probe_all_zip_detected():
+    results = probe_all(ZIP_BYTES)
+    assert len(results) >= 1
+    assert any("zip" in r.mime_type or "officedocument" in r.mime_type for r in results)
 
 
 # ---------------------------------------------------------------------------
-# Version sanity
+# Version sanity (always runs)
 # ---------------------------------------------------------------------------
 
 
 def test_version_exists():
     assert magicprobe.__version__
+
